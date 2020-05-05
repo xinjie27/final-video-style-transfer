@@ -8,9 +8,15 @@ def content_loss(img, content):
     return K.sum(K.square(img - content))
 
 def get_gram_matrix(img):
-    # TODO: May require debugging
-    gram = K.dot(img, K.transpose(img))
-    return gram
+    """
+    Compute the gram matrix G for an image tensor
+    """
+    if K.image_data_format() == "channels_first":
+        features = K.batch_flatten(img)
+    else:
+        features = K.batch_flatten(K.permute_dimensions(img, (2, 0, 1)))
+    G = K.dot(features, K.transpose(features))
+    return G
 
 def style_loss(img, style, num_channels=3):
     gram_style = get_gram_matrix(style)
@@ -19,7 +25,7 @@ def style_loss(img, style, num_channels=3):
     loss = K.sum(K.square(gram_style - gram_img)) / (4.0 * (num_channels**2) * (size**2))
     return loss
 
-def total_loss(img, content, style, alpha=10, beta=40):
+def total_loss(img, content, style, alpha=10, beta=80):
     l_content = content_loss(img, content)
     l_style = style_loss(img, style)
     loss = alpha * l_content + beta * l_style
