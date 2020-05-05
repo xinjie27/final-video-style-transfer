@@ -8,6 +8,7 @@ def content_loss(img, content):
     return K.sum(K.square(img - content))
 
 def get_gram_matrix(img):
+    # TODO: May require debugging
     gram = K.dot(img, K.transpose(img))
     return gram
 
