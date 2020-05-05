@@ -2,7 +2,6 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 from tensorflow.keras.applications import vgg19, VGG19
-from loss_functions import loss
 
 class Model():
     def __init__(self):
