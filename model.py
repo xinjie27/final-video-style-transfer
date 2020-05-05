@@ -16,7 +16,7 @@ def load_img(style_filepath, content_filepath):
     return style, content
 
 
-def load_vgg19():
+def init_vgg19():
     """
     Load the VGG19 network with pre-trained weights.
     """
@@ -24,3 +24,6 @@ def load_vgg19():
     model.trainable = False
     print("VGG19 model successfully initialized.")
     return model
+
+
+# Useful Link: https://www.datacamp.com/community/tutorials/implementing-neural-style-transfer-using-tensorflow
