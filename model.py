@@ -4,15 +4,17 @@ from tensorflow.keras.applications import VGG19
 
 class Model(object):
     def __init__(self):
-        # TODO: initialize all self attributes
-        self.learning_rate = 0.1
-        self.alpha = 10
-        self.beta = 40
+        self.learning_rate = 2
+        self.alpha = 1e-3
+        self.beta = 1
+        # Layers in which we compute the style loss
+        self.style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
+        # Layer in which we compute the content loss
+        self.content_layer = 'block4_conv2'
     
     def load(self):
-        model = VGG19(include_top=False, weights='imagenet')
+        self.model = VGG19(include_top=False, weights='imagenet')
         print("VGG19 model successfully loaded.")
-        self.model = model
         self.layer_outputs = dict([(layer.name, layer.output) for layer in model.layers])
 
     # This section contains the loss function and four helper functions.
@@ -51,7 +53,7 @@ class Model(object):
         """
         Compute the total style loss across all layers
 
-        :param map_set: a set of all feature maps of the style image
+        :param map_set: a set of all feature maps for the style image
         """
         num_layers = map_set.shape[0]
 
@@ -61,11 +63,21 @@ class Model(object):
 
         layer_losses = []
         for i in range(num_layers):
-            layer_loss = _layer_style_loss(map_set[i], ) * layer_weights[i]
+            layer_loss = _layer_style_loss(map_set[i], self.layer_outputs[self.style_layers[i]]) * layer_weights[i]
 
         return sum(layer_losses)
 
-    def loss(self, img, content, style):
+    def loss(self, img):
+        """
+        Compute the total loss of the model
+        """
         l_content = self._content_loss(img, content)
         l_style = self._style_loss(img, style)
-        return self.alpha * l_content + self.beta * l_style
+        self.loss = self.alpha * l_content + self.beta * l_style
+
+    # This section contains image preprocessing and conversion
+    # This section trains the model using stochastic gradient descent
+    def train(self):
+        # TODO
+        pass
+    
