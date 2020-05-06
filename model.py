@@ -2,10 +2,12 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 from tensorflow.keras.applications import VGG19
 
-class Model():
+class Model(object):
     def __init__(self):
         # TODO: initialize all self attributes
         self.learning_rate = 0.1
+        self.alpha = 10
+        self.beta = 40
     
     def load(self):
         model = VGG19(include_top=False, weights='imagenet')
@@ -63,8 +65,7 @@ class Model():
 
         return sum(layer_losses)
 
-    def loss(self, img, content, style, alpha=10, beta=80):
-        l_content = _content_loss(img, content)
-        l_style = _style_loss(img, style)
-        loss = alpha * l_content + beta * l_style
-        return loss
+    def loss(self, img, content, style):
+        l_content = self._content_loss(img, content)
+        l_style = self._style_loss(img, style)
+        return self.alpha * l_content + self.beta * l_style
