@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras.applications import vgg19, VGG19
 from tensorflow.keras.preprocessing.image import load_img, save_img, img_to_array
+from tensorflow.compat.v1 import variable_scope, get_variable, Session
 
 class Model(object):
     def __init__(self, content_filepath, style_filepath):
@@ -17,7 +18,7 @@ class Model(object):
         self.content_layer = 'block4_conv2'
         self.load(content_filepath, style_filepath)
     
-    def preprocess_img(self, filepath):
+    def _preprocess_img(self, filepath):
         img = load_img(filepath, target_size=(self.img_height, self.img_width))
         img = img_to_array(img)
         img = vgg19.preprocess_input(img)
@@ -28,13 +29,13 @@ class Model(object):
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in model.layers])
         # Preprocess input images
-        self.content = self.preprocess_img(content_filepath)
-        self.style = self.preprocess_img(style_filepath)
+        self.content = self._preprocess_img(content_filepath)
+        self.style = self._preprocess_img(style_filepath)
 
     
     def gen_input(self):
-        with tf.compat.v1.variable_scope("func_gen_input"):
-            self.input = tf.compat.v1.get_variable("input", shape=([1, self.img_height, self.img_width, 3]), dtype=tf.float32, initializer=tf.zeros_initializer())
+        with variable_scope("func_gen_input"):
+            self.input = get_variable("input", shape=([1, self.img_height, self.img_width, 3]), dtype=tf.float32, initializer=tf.zeros_initializer())
 
     # This section contains the loss function and four helper functions.
     def _content_loss(self, img, content):
@@ -90,16 +91,16 @@ class Model(object):
         """
         Compute the total loss of the model
         """
-        with tf.compat.v1.variable_scope("func_loss"):
+        with variable_scope("func_loss"):
             # Content loss
-            with tf.compat.v1.Session() as sess:
+            with Session() as sess:
                 sess.run(self.input.assign(self.content))
                 combination_out = self.layer_outputs[self.content_layer]
                 content_out = sess.run(combination_out)
             l_content = self._content_loss(content_out, combination_out)
 
             # Style loss
-            with tf.compat.v1.Session() as sess:
+            with Session() as sess:
                 sess.run(self.input_img.assign(self.style))
                 style_maps = sess.run([self.layer_outputs[layer] for layer in self.style_layers])                 
             l_style = self._style_loss(style_maps)
