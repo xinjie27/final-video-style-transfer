@@ -117,3 +117,31 @@ class Model(object):
 
             # Total loss
             self.total_loss = self.alpha * l_content + self.beta * l_style
+
+    def grad(self, img):
+        grads = tf.keras.backend.gradients(self.total_loss, img)
+        if len(grads) == 1:
+            grads = grads.flatten().astype('float64')
+        else:
+            grads = np.array(grads).flatten().astype('float64')
+        self.grads = grads
+
+class Evaluator(object):
+
+    def __init__(self, model):
+        self.loss_value = None
+        # self.grads_values = None
+        self.model = model
+
+    def loss(self, x):
+        assert self.loss_value is None
+        self.model.loss(x)
+        self.loss_value = self.model.total_loss
+        return self.model.total_loss
+
+    def grads(self, x):
+        assert self.loss_value is not None
+        self.model.grad(x)
+        self.loss_value = None
+        # self.grads_values = None
+        return self.model.grads
