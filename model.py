@@ -111,7 +111,7 @@ class Model(object):
 
             # Style loss
             with Session() as sess:
-                sess.run(self.input_img.assign(self.style))
+                sess.run(self.input.assign(self.style))
                 style_maps = sess.run([self.layer_outputs[layer] for layer in self.style_layers])                 
             l_style = self._style_loss(style_maps)
 
