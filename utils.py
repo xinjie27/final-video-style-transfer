@@ -34,7 +34,7 @@ def frames_to_vid(path_in, path_out, fps):
         frame_array.append(img)
     print('Successfully read all files.')
 
-    out = cv2.VideoWriter(path_out, cv2.VideoWriter_fourcc(*'mp4v'), fps, size) # alternatively *'XVID' with .avi
+    out = cv2.VideoWriter(path_out, cv2.VideoWriter_fourcc(*'mp4v'), fps, size) # Alternatively *'XVID' with .avi
 
     for i in range(len(frame_array)):
         # Write to a image array
@@ -42,9 +42,7 @@ def frames_to_vid(path_in, path_out, fps):
     out.release()
     print('Output video saved.')
 
-
-# def main():
-#     frames_to_vid('./frames/', 'style_video.mp4', 15) # fps would prob be 30
-
-# if __name__ == "__main__":
-#     main()
+def get_noise_image(content, noise_ratio=0.6):
+    noise = np.random.uniform(-20., 20., content.shape).astype(np.float32)
+    img = noise_ratio * noise + (1 - noise_ratio) * content
+    return img
