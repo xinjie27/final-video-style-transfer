@@ -2,7 +2,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras.applications import vgg19, VGG19
-from tensorflow.keras.preprocessing.image import load_img, save_img, img_to_array
+from tensorflow.keras.preprocessing.image import load_img, img_to_array
 from tensorflow.compat.v1 import variable_scope, get_variable, Session
 
 class Model(object):
@@ -16,7 +16,7 @@ class Model(object):
         self.style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
         # Layer in which we compute the content loss
         self.content_layer = 'block4_conv2'
-        self._load(content_filepath, style_filepath)
+        self.load(content_filepath, style_filepath)
     
     def _preprocess_img(self, filepath):
         img = load_img(filepath, target_size=(self.img_height, self.img_width))
@@ -24,7 +24,7 @@ class Model(object):
         img = vgg19.preprocess_input(img)
         return img
     
-    def _deprocess_img(self, img):
+    def deprocess_img(self, img):
         img = img.reshape((self.img_height, self.img_width, 3))
         img = img[:, :, ::-1] # BGR -> RGB
         img = np.clip(img, 0, 255).astype('uint8')
@@ -34,7 +34,7 @@ class Model(object):
         img[:, :, 2] += 103.939
         return img
     
-    def _load(self, content_filepath, style_filepath):
+    def load(self, content_filepath, style_filepath):
         self.model = VGG19(include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in self.model.layers])
@@ -126,22 +126,22 @@ class Model(object):
             grads = np.array(grads).flatten().astype('float64')
         self.grads = grads
 
-class Evaluator(object):
 
+class Evaluator(object):
     def __init__(self, model):
         self.loss_value = None
         # self.grads_values = None
         self.model = model
 
-    def loss(self, x):
+    def loss(self, img):
         assert self.loss_value is None
-        self.model.loss(x)
+        self.model.loss(img)
         self.loss_value = self.model.total_loss
         return self.model.total_loss
 
-    def grads(self, x):
+    def grads(self, img):
         assert self.loss_value is not None
-        self.model.grad(x)
+        self.model.grad(img)
         self.loss_value = None
         # self.grads_values = None
         return self.model.grads
