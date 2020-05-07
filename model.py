@@ -16,7 +16,7 @@ class Model(object):
         self.style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
         # Layer in which we compute the content loss
         self.content_layer = 'block4_conv2'
-        self.load(content_filepath, style_filepath)
+        self._load(content_filepath, style_filepath)
     
     def _preprocess_img(self, filepath):
         img = load_img(filepath, target_size=(self.img_height, self.img_width))
@@ -24,14 +24,23 @@ class Model(object):
         img = vgg19.preprocess_input(img)
         return img
     
-    def load(self, content_filepath, style_filepath):
+    def _deprocess_img(self, img):
+        img = img.reshape((self.img_height, self.img_width, 3))
+        img = img[:, :, ::-1] # BGR -> RGB
+        img = np.clip(img, 0, 255).astype('uint8')
+        # Inverse mean-centering
+        img[:, :, 0] += 123.68
+        img[:, :, 1] += 116.779
+        img[:, :, 2] += 103.939
+        return img
+    
+    def _load(self, content_filepath, style_filepath):
         self.model = VGG19(include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in model.layers])
         # Preprocess input images
         self.content = self._preprocess_img(content_filepath)
         self.style = self._preprocess_img(style_filepath)
-
     
     def gen_input(self):
         with variable_scope("func_gen_input"):
@@ -107,18 +116,3 @@ class Model(object):
 
             # Total loss
             self.loss = self.alpha * l_content + self.beta * l_style
-
-
-    # This section contains image processing
-    def preprocess(self, filepath):
-        img = plt.imread(filepath)
-        img = vgg19.preprocess_input(img)
-        return img
-
-    def deprocess(self, img):
-        mean_red = 123.68
-        mean_green = 116.779
-        mean_blue = 103.939
-        img = img[:, :, ::-1]
-        # TODO
-        return img
