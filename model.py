@@ -37,7 +37,7 @@ class Model(object):
     def _load(self, content_filepath, style_filepath):
         self.model = VGG19(include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
-        self.layer_outputs = dict([(layer.name, layer.output) for layer in model.layers])
+        self.layer_outputs = dict([(layer.name, layer.output) for layer in self.model.layers])
         # Preprocess input images
         self.content = self._preprocess_img(content_filepath)
         self.style = self._preprocess_img(style_filepath)
@@ -92,7 +92,8 @@ class Model(object):
 
         layer_losses = []
         for i in range(num_layers):
-            layer_loss = _layer_style_loss(map_set[i], self.layer_outputs[self.style_layers[i]]) * layer_weights[i]
+            layer_loss = self._layer_style_loss(map_set[i], self.layer_outputs[self.style_layers[i]]) * layer_weights[i]
+            layer_losses.append(layer_loss)
 
         return sum(layer_losses)
 
