@@ -2,6 +2,7 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras.applications import vgg19, VGG19
+from tensorflow.keras.preprocessing.image import load_img, save_img, img_to_array
 
 class Model(object):
     def __init__(self, content_filepath, style_filepath):
@@ -14,11 +15,22 @@ class Model(object):
         self.style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
         # Layer in which we compute the content loss
         self.content_layer = 'block4_conv2'
+        self.load(content_filepath, style_filepath)
     
-    def load(self):
+    def preprocess_img(self, filepath):
+        img = load_img(filepath, target_size=(self.img_height, self.img_width))
+        img = img_to_array(img)
+        img = vgg19.preprocess_input(img)
+        return img
+    
+    def load(self, content_filepath, style_filepath):
         self.model = VGG19(include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in model.layers])
+        # Preprocess input images
+        self.content = self.preprocess_img(content_filepath)
+        self.style = self.preprocess_img(style_filepath)
+
     
     def gen_input(self):
         with tf.compat.v1.variable_scope("func_gen_input"):
