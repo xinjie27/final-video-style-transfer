@@ -6,12 +6,12 @@ from tensorflow.keras.preprocessing.image import load_img, save_img, img_to_arra
 from tensorflow.compat.v1 import variable_scope, get_variable, Session
 
 class Model(object):
-    def __init__(self, content_filepath, style_filepath):
+    def __init__(self, content_filepath, style_filepath, img_h=300, img_w=400):
         self.learning_rate = 2
         self.alpha = 1e-3
         self.beta = 1
-        self.img_height = 300
-        self.img_width = 400
+        self.img_height = img_h
+        self.img_width = img_w
         # Layers in which we compute the style loss
         self.style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
         # Layer in which we compute the content loss
