@@ -5,8 +5,11 @@ from model import Model, Evaluator
 import time
 from scipy.optimize import fmin_l_bfgs_b
 from tensorflow.keras.preprocessing.image import save_img
+import tensorflow as tf
 
 def main():
+    tf.compat.v1.disable_v2_behavior()
+
     parser = argparse.ArgumentParser()
     parser.add_argument('-v', '--video', required=True, help='path to the video')
     parser.add_argument('-s', '--style_img', required=True, help='path to the style image')
@@ -26,8 +29,8 @@ def main():
 
     # read_frames(video_path)
     model = Model(video_path, style_path)
-    model.gen_input()
     evaluator = Evaluator(model)
+    x = get_noise_image(model.content)
 
     for i in range(300):
         print('Start of iteration', i)
