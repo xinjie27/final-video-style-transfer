@@ -72,8 +72,8 @@ class Model(object):
         h, w, num_channels = img.shape
         area = h * w
 
-        gram_style = _gram_matrix(style, area, num_channels)
-        gram_img = _gram_matrix(img, area, num_channels)
+        gram_style = self._gram_matrix(style, area, num_channels)
+        gram_img = self._gram_matrix(img, area, num_channels)
 
         loss = tf.math.reduce_sum(tf.math.square(gram_img - gram_style)) / (area * num_channels * 2)**2
         return loss
@@ -116,4 +116,4 @@ class Model(object):
             l_style = self._style_loss(style_maps)
 
             # Total loss
-            self.loss = self.alpha * l_content + self.beta * l_style
+            self.total_loss = self.alpha * l_content + self.beta * l_style
