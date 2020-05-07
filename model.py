@@ -1,6 +1,7 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
-from tensorflow.keras.applications import VGG19
+import numpy as np
+from tensorflow.keras.applications import vgg19, VGG19
 
 class Model(object):
     def __init__(self):
@@ -16,6 +17,10 @@ class Model(object):
         self.model = VGG19(include_top=False, weights='imagenet')
         print("VGG19 model successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in model.layers])
+    
+    def gen_input(self):
+        with tf.compat.v1.variable_scope("gen_input"):
+            self.input = tf.compat.v1.get_variable("in_img", shape=([1, self.img_height, self.img_width, 3]), dtype=tf.float32, initializer=tf.zeros_initializer())
 
     # This section contains the loss function and four helper functions.
     def _content_loss(self, img, content):
@@ -71,19 +76,40 @@ class Model(object):
         """
         Compute the total loss of the model
         """
-        l_content = self._content_loss(img, content)
-        l_style = self._style_loss(img, style)
-        self.loss = self.alpha * l_content + self.beta * l_style
+        with tf.compat.v1.variable_scope("loss"):
+            # Content loss
+            with tf.compat.v1.Session() as sess:
+                sess.run(self.input.assign(self.content))
+                combination_out = self.layer_outputs[self.content_layer]
+                content_out = sess.run(combination_out)
+            l_content = self._content_loss(content_out, combination_out)
+
+            # Style loss
+            with tf.compat.v1.Session() as sess:
+                sess.run(self.input_img.assign(self.style))
+                style_maps = sess.run(self.layer_outputs[layer] for layer in self.style_layers])                              
+            l_style = self._style_loss(style_maps)
+
+            # Total loss
+            self.loss = self.alpha * l_content + self.beta * l_style
+
 
     # This section contains image processing
-    def preprocess(self, img):
-        pass
+    def preprocess(self, filepath):
+        img = plt.imread(filepath)
+        img = vgg19.preprocess_input(img)
+        return img
 
     def deprocess(self, img):
+        mean_red = 123.68
+        mean_green = 116.779
+        mean_blue = 103.939
+        img = img[:, :, ::-1]
+        
         pass
 
     # This section trains the model using stochastic gradient descent
     def train(self):
-        # TODO
+        self.optimizer = tf.compat.v1.train.GradientDescentOptimizer(self.learning_rate)
         pass
     
