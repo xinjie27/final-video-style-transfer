@@ -75,7 +75,13 @@ class Model(object):
         l_style = self._style_loss(img, style)
         self.loss = self.alpha * l_content + self.beta * l_style
 
-    # This section contains image preprocessing and conversion
+    # This section contains image processing
+    def preprocess(self, img):
+        pass
+
+    def deprocess(self, img):
+        pass
+
     # This section trains the model using stochastic gradient descent
     def train(self):
         # TODO
