@@ -75,6 +75,12 @@ class Model(object):
         l_style = self._style_loss(img, style)
         self.loss = self.alpha * l_content + self.beta * l_style
 
+    def get_noise_image(noise_ratio, content_img):
+        np.random.seed(args.seed)
+        noise_img = np.random.uniform(-20., 20., content_img.shape).astype(np.float32)
+        img = noise_ratio * noise_img + (1.-noise_ratio) * content_img
+        return img
+
     # This section contains image preprocessing and conversion
     # This section trains the model using stochastic gradient descent
     def train(self):
