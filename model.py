@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras.applications import vgg19, VGG19
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.compat.v1 import variable_scope, get_variable, Session
+from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_variables_initializer,train 
 from tensorflow.keras import backend as K
 
 class Model(object):
-    def __init__(self, content_filepath, style_filepath, img_h=300, img_w=400):
+    def __init__(self, content_filepath, style_filepath, img_h=300, img_w=400, lrate=2.0):
         self.learning_rate = 2
         self.alpha = 1e-3
         self.beta = 1
@@ -17,6 +17,10 @@ class Model(object):
         self.style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
         # Layer in which we compute the content loss
         self.content_layer = 'block5_conv2'
+        # global step and learning rate
+        self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")
+        self.lrate = lrate
+
         self.gen_input()
         self.load(content_filepath, style_filepath)
     
@@ -130,30 +134,36 @@ class Model(object):
             # Total loss
             self.total_loss = self.alpha * l_content + self.beta * l_style
 
-    def grad(self, img):
-        grads = K.gradients(self.total_loss, img)
-        if len(grads) == 1:
-            grads = grads.flatten().astype('float64')
-        else:
-            grads = np.array(grads).flatten().astype('float64')
-        self.grads = grads
+    # def grad(self, img):
+    #     grads = K.gradients(self.total_loss, img)
+    #     if len(grads) == 1:
+    #         grads = grads.flatten().astype('float64')
+    #     else:
+    #         grads = np.array(grads).flatten().astype('float64')
+    #     self.grads = grads
 
+    def optimize(self):
+        self.optimizer = tf.compat.v1.train.GradientDescentOptimizer(self.lrate).minimize(self.total_loss, global_step=self.gstep)
 
-class Evaluator(object):
-    def __init__(self, model):
-        self.loss_value = None
-        # self.grads_values = None
-        self.model = model
+    def train(self, epochs=250):
+        with Session() as sess:
+            sess.run(global_variables_initializer())
 
-    def loss(self, img):
-        assert self.loss_value is None
-        self.model.loss(img)
-        self.loss_value = self.model.total_loss
-        return self.model.total_loss
+# class Evaluator(object):
+#     def __init__(self, model):
+#         self.loss_value = None
+#         # self.grads_values = None
+#         self.model = model
 
-    def grads(self, img):
-        assert self.loss_value is not None
-        self.model.grad(img)
-        self.loss_value = None
-        # self.grads_values = None
-        return self.model.grads
+#     def loss(self, img):
+#         assert self.loss_value is None
+#         self.model.loss(img)
+#         self.loss_value = self.model.total_loss
+#         return self.model.total_loss
+
+#     def grads(self, img):
+#         assert self.loss_value is not None
+#         self.model.grad(img)
+#         self.loss_value = None
+#         # self.grads_values = None
+#         return self.model.grads
