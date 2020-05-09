@@ -14,8 +14,8 @@ def read_frames(filepath):
         count += 1
     print("%d frames successfully generated." % count)
 
-# def main():
-#     read_frames('test.mp4')
+def main():
+    read_frames('test.mp4')
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()
