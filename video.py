@@ -14,12 +14,12 @@ class Video(object):
         self.n_iters = n_iters
     
     def _stylize_frame(self, img):
-        model = Model(img, self.style_path, self.img_height, self.img_width, self.lr)
-        model.optimize()
-        model.train(self.n_iters)
+        image_model = Model(img, self.style_path, self.img_height, self.img_width, self.lr)
+        image_model.optimize()
+        image_model.train(self.n_iters)
 
     def vid_to_frames(self):
-        video = cv2.VideoCapture(self.filepath)
+        video = cv2.VideoCapture(self.video_path)
         print("Video successfully opened.")
         count = 0 # Frame count
         is_reading = 1
@@ -28,7 +28,7 @@ class Video(object):
             is_reading, img = video.read()
             if (is_reading == False):
                 break
-            _stylize_frame(img)
+            self._stylize_frame(img)
             count += 1
         print("All frames are successfully stylized.")
 
