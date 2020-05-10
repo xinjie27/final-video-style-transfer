@@ -7,7 +7,7 @@ from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_v
 from tensorflow.keras import backend as K
 
 class Model(object):
-    def __init__(self, content_filepath, style_filepath, img_h=300, img_w=400, lr=2.0):
+    def __init__(self, content_filepath, style_filepath, img_h, img_w, lr):
         self.learning_rate = 2
         self.alpha = 1e-3
         self.beta = 1
