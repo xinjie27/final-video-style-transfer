@@ -5,16 +5,17 @@ from os.path import isfile, join
 from model import Model
 
 class Video(object):
-    def __init__(self, video_path, style_path, img_h, img_w, lr, n_iters):
+    def __init__(self, video_path, style_path, img_h, img_w, lr, n_iters, fps):
         self.video_path = video_path
         self.style_path = style_path
         self.img_height = img_h
         self.img_width = img_w
         self.lr = lr
         self.n_iters = n_iters
+        self.fps = fps
     
-    def _stylize_frame(self, img):
-        image_model = Model(img, self.style_path, self.img_height, self.img_width, self.lr)
+    def _stylize_frame(self, img, frame_idx):
+        image_model = Model(img, self.style_path, self.img_height, self.img_width, self.lr, frame_idx)
         image_model.optimize()
         image_model.train(self.n_iters)
 
@@ -28,11 +29,11 @@ class Video(object):
             is_reading, img = video.read()
             if (is_reading == False):
                 break
-            self._stylize_frame(img)
             count += 1
+            self._stylize_frame(img, count)
         print("All frames are successfully stylized.")
 
-    def frames_to_vid(self, path_in, path_out, fps=30):
+    def frames_to_vid(self, path_in, path_out):
         frame_array = []
         files = [f for f in os.listdir(path_in) if isfile(join(path_in, f)) if not f.startswith('.')]
 
@@ -49,7 +50,7 @@ class Video(object):
             frame_array.append(img)
         print("Successfully read all files.")
 
-        out = cv2.VideoWriter(path_out, cv2.VideoWriter_fourcc(*'mp4v'), fps, size) # Alternatively *'XVID' with .avi
+        out = cv2.VideoWriter(path_out, cv2.VideoWriter_fourcc(*'mp4v'), self.fps, size) # Alternatively *'XVID' with .avi
 
         for i in range(len(frame_array)):
             # Write to a image array
