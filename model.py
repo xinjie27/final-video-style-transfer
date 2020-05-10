@@ -3,11 +3,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras.applications import vgg19, VGG19
 from tensorflow.keras.preprocessing.image import load_img, img_to_array
-from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_variables_initializer,train 
+from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_variables_initializer, train
 from tensorflow.keras import backend as K
 
 class Model(object):
-    def __init__(self, content_filepath, style_filepath, img_h=300, img_w=400, lrate=2.0):
+    def __init__(self, content_filepath, style_filepath, img_h=300, img_w=400, lr=2.0):
         self.learning_rate = 2
         self.alpha = 1e-3
         self.beta = 1
@@ -19,7 +19,7 @@ class Model(object):
         self.content_layer = 'block5_conv2'
         # global step and learning rate
         self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")
-        self.lrate = lrate
+        self.lr = lr
 
         self.gen_input()
         self.load(content_filepath, style_filepath)
@@ -143,7 +143,7 @@ class Model(object):
     #     self.grads = grads
 
     def optimize(self):
-        self.optimizer = tf.compat.v1.train.GradientDescentOptimizer(self.lrate).minimize(self.total_loss, global_step=self.gstep)
+        self.optimizer = train.GradientDescentOptimizer(self.lrate).minimize(self.total_loss, global_step=self.gstep)
 
     def train(self, epochs=250):
         with Session() as sess:
