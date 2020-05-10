@@ -36,26 +36,28 @@ class Model(object):
     
     def deprocess_img(self, img):
         img = img.reshape((self.img_height, self.img_width, 3))
-        img = img[:, :, ::-1] # BGR -> RGB
-        img = np.clip(img, 0, 255).astype('uint8')
+        
         # Inverse mean-centering
         img[:, :, 0] += 123.68
         img[:, :, 1] += 116.779
         img[:, :, 2] += 103.939
+
+        img = img[:, :, ::-1] # BGR -> RGB
+        img = np.clip(img, 0, 255).astype('uint8')
         return img
     
     def load(self, content, style_filepath):
         self.content = vgg19.preprocess_input(content)
+
         style = load_img(style_filepath, target_size=(self.img_height, self.img_width))
         style = img_to_array(style)
         style = np.expand_dims(style, 0)
         self.style = vgg19.preprocess_input(style)
         content_img = K.variable(self.content)
         style_img = K.variable(self.style)
-        if K.image_data_format() == 'channels_first':
-            gen_img = K.placeholder((1, 3, self.img_height, self.img_width))
-        else:
-            gen_img = K.placeholder((1, self.img_height, self.img_width, 3))
+
+        self._gen_noise_image(self.content)
+        gen_img = K.variable(self.initial_img)
 
         # combine the 3 images into a single Keras tensor
         tensor = K.concatenate([content_img, style_img, gen_img], axis=0)
@@ -92,13 +94,14 @@ class Model(object):
         :param img: the input image
         :param style: the style image
         """
-        h, w, num_channels = img.shape
-        area = h * w
+        # h, w, num_channels = img.shape
+        area = img.shape[0].value * img.shape[1].value
+        num_channels = img.shape[2].value
 
         gram_style = self._gram_matrix(style, area, num_channels)
         gram_img = self._gram_matrix(img, area, num_channels)
 
-        loss = tf.math.reduce_sum(tf.math.square(gram_img - gram_style)) / (area * num_channels * 2)**2
+        loss = tf.math.reduce_sum(tf.math.square(gram_img - gram_style)) / (area * area * num_channels * num_channels * 4)
         return loss
 
     def _style_loss(self, map_set):
@@ -115,7 +118,8 @@ class Model(object):
 
         layer_losses = []
         for i in range(num_layers):
-            layer_loss = self._layer_style_loss(map_set[i], self.layer_outputs[self.style_layers[i]]) * layer_weights[i]
+            style = (self.layer_outputs[self.style_layers[i]])[1,:,:,:]
+            layer_loss = self._layer_style_loss(map_set[i], style) * layer_weights[i]
             layer_losses.append(layer_loss)
 
         return sum(layer_losses)
@@ -126,20 +130,29 @@ class Model(object):
         """
         with variable_scope("losses"):
             # Content loss
-            with Session() as sess:
-                sess.run(self.input.assign(self.content))
-                print(self.layer_outputs[self.content_layer])
-                combination_out = self.layer_outputs[self.content_layer]
-                print(combination_out)
-                content_out = sess.run(combination_out)
+            # with Session() as sess:
+            #     sess.run(self.input.assign(self.content))
+            #     print(self.layer_outputs[self.content_layer])
+            #     combination_out = self.layer_outputs[self.content_layer]
+            #     print(combination_out)
+            #     content_out = sess.run(combination_out)
+            layer_features = self.layer_outputs[self.content_layer]
+            content_out = layer_features[0, :, :, :]
+            combination_out = layer_features[2, :, :, :]
 
             l_content = self._content_loss(content_out, combination_out)
 
             # Style loss
-            with Session() as sess:
-                print('here 2')
-                sess.run(self.input.assign(self.style))
-                style_maps = sess.run([self.layer_outputs[layer] for layer in self.style_layers])                 
+            # with Session() as sess:
+            #     print('here 2')
+            #     sess.run(self.input.assign(self.style))
+            #     style_maps = sess.run([self.layer_outputs[layer] for layer in self.style_layers])
+            style_maps = []
+            for layer in self.style_layers:
+                layer_features = self.layer_outputs[layer]
+                style_feature = layer_features[1, :, :, :]
+                style_maps.append(style_feature)
+            style_maps = np.asarray(style_maps)                 
             l_style = self._style_loss(style_maps)
 
             # Total loss
@@ -154,13 +167,13 @@ class Model(object):
     #     self.grads = grads
 
     def optimize(self):
-        self.optimizer = optimizers.SGD(self.lr).minimize(self.total_loss, global_step=self.gstep)
+        self.optimizer = train.GradientDescentOptimizer(self.lr).minimize(self.total_loss, global_step=self.gstep)
 
     def train(self, n_iters):
+        print('training starts')
         with Session() as sess:
             sess.run(global_variables_initializer())
 
-            self._gen_noise_image(self.content)
             sess.run(self.input.assign(self.initial_img))
 
             # (maybe)TODO: train.get_checkpoint_state
@@ -169,9 +182,11 @@ class Model(object):
 
             #skip_step = 10
             for epoch in range(initial_step, n_iters):
+                print(epoch)
                 sess.run(self.optimizer)
-                if epoch == n_iters:
+                if epoch == (n_iters - 1):
                     gen_img = sess.run([self.input])
+                    gen_img = np.asarray(gen_img)
                     gen_img = self.deprocess_img(gen_img)
                     filepath = "./frames/frame_%d.png" % self.frame_idx
                     save_img(filepath, gen_img)
