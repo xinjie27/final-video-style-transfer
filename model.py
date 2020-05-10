@@ -170,7 +170,7 @@ class Model(object):
                 if epoch == n_iters:
                     gen_img = sess.run([self.input])
                 gen_img = self.deprocess_img(gen_img)
-                filepath = "./frames/frame_%d.png" % epoch
+                filepath = "./frames/frame_%d.png" % self.frame_idx
                 save_img(filepath, gen_img)
 
 # class Evaluator(object):
