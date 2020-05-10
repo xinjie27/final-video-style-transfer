@@ -3,8 +3,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras.applications import vgg19, VGG19
 from tensorflow.keras.preprocessing.image import load_img, img_to_array, save_img
-from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_variables_initializer, train
+from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_variables_initializer, train, disable_eager_execution
 from tensorflow.keras import backend as K
+from tensorflow.keras import optimizers
+import argparse
 
 class Model(object):
     def __init__(self, content, style_filepath, img_h, img_w, lr, frame_idx):
@@ -25,18 +27,12 @@ class Model(object):
 
         self.gen_input()
         self.load(content, style_filepath)
+        self.loss()
     
     def _gen_noise_image(self, content, noise_ratio=0.6):
         noise = np.random.uniform(-20., 20., content.shape).astype(np.float32)
         img = noise_ratio * noise + (1 - noise_ratio) * content
         self.initial_img = img
-
-    def _preprocess_img(self, img):
-        # img = load_img(filepath, target_size=(self.img_height, self.img_width))
-        img = img_to_array(img)
-        img = np.expand_dims(img, 0)
-        img = vgg19.preprocess_input(img)
-        return img
     
     def deprocess_img(self, img):
         img = img.reshape((self.img_height, self.img_width, 3))
@@ -49,17 +45,20 @@ class Model(object):
         return img
     
     def load(self, content, style_filepath):
-        self.content = self._preprocess_img(content)
+        self.content = vgg19.preprocess_input(content)
         style = load_img(style_filepath, target_size=(self.img_height, self.img_width))
-        self.style = self._preprocess_img(style)
+        style = img_to_array(style)
+        style = np.expand_dims(style, 0)
+        self.style = vgg19.preprocess_input(style)
         content_img = K.variable(self.content)
         style_img = K.variable(self.style)
-        # if K.image_data_format() == 'channels_first':
-        #     gen_img = K.placeholder((1, 3, self.img_height, self.img_width))
-        # else:
-        # gen_img = K.placeholder((1, self.img_height, self.img_width, 3))
+        if K.image_data_format() == 'channels_first':
+            gen_img = K.placeholder((1, 3, self.img_height, self.img_width))
+        else:
+            gen_img = K.placeholder((1, self.img_height, self.img_width, 3))
+
         # combine the 3 images into a single Keras tensor
-        tensor = K.concatenate([content_img, style_img], axis=0)
+        tensor = K.concatenate([content_img, style_img, gen_img], axis=0)
         self.model = VGG19(input_tensor=tensor,include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in self.model.layers])
@@ -67,7 +66,7 @@ class Model(object):
 
     
     def gen_input(self):
-        with variable_scope("func_gen_input"):
+        with variable_scope("input"):
             self.input = get_variable("input", shape=([1, self.img_height, self.img_width, 3]), dtype=tf.float32, initializer=tf.zeros_initializer())
 
     # This section contains the loss function and four helper functions.
@@ -121,20 +120,24 @@ class Model(object):
 
         return sum(layer_losses)
 
-    def loss(self, img):
+    def loss(self):
         """
         Compute the total loss of the model
         """
-        with variable_scope("func_loss"):
+        with variable_scope("losses"):
             # Content loss
             with Session() as sess:
                 sess.run(self.input.assign(self.content))
+                print(self.layer_outputs[self.content_layer])
                 combination_out = self.layer_outputs[self.content_layer]
+                print(combination_out)
                 content_out = sess.run(combination_out)
+
             l_content = self._content_loss(content_out, combination_out)
 
             # Style loss
             with Session() as sess:
+                print('here 2')
                 sess.run(self.input.assign(self.style))
                 style_maps = sess.run([self.layer_outputs[layer] for layer in self.style_layers])                 
             l_style = self._style_loss(style_maps)
@@ -151,7 +154,7 @@ class Model(object):
     #     self.grads = grads
 
     def optimize(self):
-        self.optimizer = train.GradientDescentOptimizer(self.lr).minimize(self.total_loss, global_step=self.gstep)
+        self.optimizer = optimizers.SGD(self.lr).minimize(self.total_loss, global_step=self.gstep)
 
     def train(self, n_iters):
         with Session() as sess:
@@ -169,9 +172,9 @@ class Model(object):
                 sess.run(self.optimizer)
                 if epoch == n_iters:
                     gen_img = sess.run([self.input])
-                gen_img = self.deprocess_img(gen_img)
-                filepath = "./frames/frame_%d.png" % self.frame_idx
-                save_img(filepath, gen_img)
+                    gen_img = self.deprocess_img(gen_img)
+                    filepath = "./frames/frame_%d.png" % self.frame_idx
+                    save_img(filepath, gen_img)
 
 # class Evaluator(object):
 #     def __init__(self, model):
@@ -191,3 +194,30 @@ class Model(object):
 #         self.loss_value = None
 #         # self.grads_values = None
 #         return self.model.grads
+
+if __name__ == "__main__":
+    tf.compat.v1.disable_v2_behavior()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', '--input', required=True, help='path to the input')
+    parser.add_argument('-s', '--style_img', required=True, help='path to the style image')
+    # parser.add_argument('-o', '--output', required=True, help='output path')
+    parser.add_argument('--width', required=False, default=400, type=int, help='output image width')
+    parser.add_argument('--height', required=False, default=300, type=int, help='output image height')
+    parser.add_argument('--lr', required=False, default=2., type=float, help='hyperparameter: learning rate')
+    # parser.add_argument('--iter', required=False, default=250, type=int, help='hyperparameter: number of training iterations')
+
+    args = parser.parse_args()
+    input_path = args.input
+    style_path = args.style_img
+    img_height = args.height
+    img_width = args.width
+    lr = args.lr
+
+    content = load_img(input_path, target_size=(img_height, img_width))
+    content = img_to_array(content)
+    content = np.expand_dims(content, 0)
+    model = Model(content, style_path, img_height, img_width, lr, 0)
+    model.optimize()
+    model.train(100)
+    
