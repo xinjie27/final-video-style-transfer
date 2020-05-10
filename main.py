@@ -1,9 +1,5 @@
 import argparse
-import numpy as np
-import time
-from scipy.optimize import fmin_l_bfgs_b
 import tensorflow as tf
-from tensorflow.keras.preprocessing.image import save_img
 from video import Video
 
 def main():
@@ -33,7 +29,7 @@ def main():
 
     video_processor = Video(video_path, style_path, img_height, img_width, lr, n_iters, fps)
     video_processor.vid_to_frames()
-    video_processor.frames_to_vid('./frames/', output_path, fps)
+    video_processor.frames_to_vid('./frames/', output_path)
 
 if __name__ == "__main__":
     main()
