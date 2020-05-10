@@ -2,15 +2,16 @@ import tensorflow as tf
 import matplotlib.pyplot as plt
 import numpy as np
 from tensorflow.keras.applications import vgg19, VGG19
-from tensorflow.keras.preprocessing.image import load_img, img_to_array
+from tensorflow.keras.preprocessing.image import load_img, img_to_array, save_img
 from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_variables_initializer, train
 from tensorflow.keras import backend as K
 
 class Model(object):
-    def __init__(self, content_filepath, style_filepath, img_h, img_w, lr):
+    def __init__(self, content, style_filepath, img_h, img_w, lr, frame_idx):
         self.learning_rate = 2
         self.alpha = 1e-3
         self.beta = 1
+        # self.content = content
         self.img_height = img_h
         self.img_width = img_w
         # Layers in which we compute the style loss
@@ -20,12 +21,18 @@ class Model(object):
         # global step and learning rate
         self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")
         self.lr = lr
+        self.frame_idx = frame_idx
 
         self.gen_input()
-        self.load(content_filepath, style_filepath)
+        self.load(content, style_filepath)
     
-    def _preprocess_img(self, filepath):
-        img = load_img(filepath, target_size=(self.img_height, self.img_width))
+    def _gen_noise_image(self, content, noise_ratio=0.6):
+        noise = np.random.uniform(-20., 20., content.shape).astype(np.float32)
+        img = noise_ratio * noise + (1 - noise_ratio) * content
+        self.initial_img = img
+
+    def _preprocess_img(self, img):
+        # img = load_img(filepath, target_size=(self.img_height, self.img_width))
         img = img_to_array(img)
         img = np.expand_dims(img, 0)
         img = vgg19.preprocess_input(img)
@@ -41,9 +48,10 @@ class Model(object):
         img[:, :, 2] += 103.939
         return img
     
-    def load(self, content_filepath, style_filepath):
-        self.content = self._preprocess_img(content_filepath)
-        self.style = self._preprocess_img(style_filepath)
+    def load(self, content, style_filepath):
+        self.content = self._preprocess_img(content)
+        style = load_img(style_filepath, target_size=(self.img_height, self.img_width))
+        self.style = self._preprocess_img(style)
         content_img = K.variable(self.content)
         style_img = K.variable(self.style)
         # if K.image_data_format() == 'channels_first':
@@ -143,11 +151,27 @@ class Model(object):
     #     self.grads = grads
 
     def optimize(self):
-        self.optimizer = train.GradientDescentOptimizer(self.lrate).minimize(self.total_loss, global_step=self.gstep)
+        self.optimizer = train.GradientDescentOptimizer(self.lr).minimize(self.total_loss, global_step=self.gstep)
 
-    def train(self, epochs=250):
+    def train(self, n_iters):
         with Session() as sess:
             sess.run(global_variables_initializer())
+
+            self._gen_noise_image(self.content)
+            sess.run(self.input.assign(self.initial_img))
+
+            # (maybe)TODO: train.get_checkpoint_state
+
+            initial_step = self.gstep.eval()
+
+            #skip_step = 10
+            for epoch in range(initial_step, n_iters):
+                sess.run(self.optimizer)
+                if epoch == n_iters:
+                    gen_img = sess.run([self.input])
+                gen_img = self.deprocess_img(gen_img)
+                filepath = "./frames/frame_%d.png" % self.frame_idx
+                save_img(filepath, gen_img)
 
 # class Evaluator(object):
 #     def __init__(self, model):
