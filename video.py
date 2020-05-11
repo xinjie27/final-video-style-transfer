@@ -3,6 +3,7 @@ import os
 import numpy as np
 from os.path import isfile, join
 from model import Image
+import tensorflow as tf
 
 class Video(object):
     def __init__(self, video_path, style_path, img_h, img_w, lr, n_iters, fps):
@@ -15,6 +16,7 @@ class Video(object):
         self.fps = fps
     
     def _stylize_frame(self, img_path, frame_idx):
+        tf.reset_default_graph()
         image_model = Image(img_path, self.style_path, self.img_height, self.img_width, self.lr, frame_idx)
         image_model.build()
         image_model.train(self.n_iters)

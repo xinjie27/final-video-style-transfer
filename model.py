@@ -15,9 +15,9 @@ class Image(object):
         self.img_height = img_h
         self.img_width = img_w
         
-        self.content_img = get_resized_image(content_filepath, img_width, img_height)
-        self.style_img = get_resized_image(style_filepath, img_width, img_height)
-        self.initial_img = generate_noise_image(self.content_img, img_width, img_height)
+        self.content_img = get_resized_image(content_filepath, self.img_width, self.img_height)
+        self.style_img = get_resized_image(style_filepath, self.img_width, self.img_height)
+        self.initial_img = generate_noise_image(self.content_img, self.img_width, self.img_height)
         # self.prev_frame = get_resized_image(prev_img, img_width, img_height)
         self.frame_idx = frame_idx
 
