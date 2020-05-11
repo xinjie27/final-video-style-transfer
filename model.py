@@ -53,15 +53,15 @@ class Model(object):
         style = load_img(style_filepath, target_size=(self.img_height, self.img_width))
         style = img_to_array(style)
         style = np.expand_dims(style, 0)
-        self.style = vgg19.preprocess_input(style)
+        self.style = K.variable(vgg19.preprocess_input(style))
         content_img = K.variable(self.content)
         style_img = K.variable(self.style)
 
         self._gen_noise_image(self.content)
-        gen_img = K.variable(self.initial_img)
+        self.initial_img = K.variable(self.initial_img)
 
         # Combine 3 images into a single tensor
-        tensor = K.concatenate([content_img, style_img, gen_img], axis=0)
+        tensor = K.concatenate([content_img, style_img, self.initial_img], axis=0)
         self.model = VGG19(input_tensor=tensor, include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in self.model.layers])
@@ -78,7 +78,6 @@ class Model(object):
     def _gram_matrix(self, img, area, num_channels):
         """
         Compute the gram matrix G for an image tensor
-
         :param img: the feature map of an image, of shape (h, w, num_channels)
         :param area: h * w for some image
         :param num_channels: the number of channels in some image feature map
@@ -90,7 +89,6 @@ class Model(object):
     def _layer_style_loss(self, img, style):
         """
         Compute the style loss in a single layer
-
         :param img: the input image
         :param style: the style image
         """
@@ -106,7 +104,6 @@ class Model(object):
     def _style_loss(self, combination_maps, style_maps):
         """
         Compute the total style loss across all layers
-
         :param combination_maps: a set of all feature maps for the combination image
         :param style_maps: a set of all feature maps for the style image
         """
@@ -195,7 +192,8 @@ class Model(object):
                 if epoch == (n_iters - 1):
                     gen_img = sess.run([self.input])
                     gen_img = np.asarray(gen_img)
-                    final_img = self._deprocess_img(gen_img.copy())
+                    final_img = self._deprocess_img(gen_img)
+                    self.final = final_img
                     filepath = "./frames/frame_%d.png" % self.frame_idx
                     save_img(filepath, final_img)
 
