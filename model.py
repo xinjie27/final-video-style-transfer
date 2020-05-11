@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import tensorflow as tf
+import cv2
 from vgg19 import VGG
 from utils import *
 from os.path import isfile, join
@@ -104,18 +105,20 @@ class Image(object):
         return res
 
     def make_opt_flow(self, prev, nxt):
-        prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
-        nxt_gray = cv2.cvtColor(nxt, cv2.COLOR_BGR2GRAY)
+        print(prev.shape)
+        print(nxt.shape)
+        prev_gray = cv2.cvtColor(cv2.UMat(prev[0,:,:,:]), cv2.COLOR_BGR2GRAY)
+        nxt_gray = cv2.cvtColor(cv2.UMat(nxt[0,:,:,:]), cv2.COLOR_BGR2GRAY)
         flow = cv2.calcOpticalFlowFarneback(prev_gray, nxt_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         return flow
 
     def get_prev_warped_frame(self, frame):
         prev_frame = self.prev_frame
         # backwards flow: current frame -> previous frame
-        flow = self.make_opt_flow(prev_frame, this_frame)
-        warped_img = self.warp_image(prev_img, flow).astype(np.float32)
+        flow = self.make_opt_flow(prev_frame, frame)
+        warped_img = self.warp_image(prev_frame, flow).astype(np.float32)
         # img = preprocess(warped_img)
-        return img
+        return warped_img
 
     #flow1 is back, flow2 is forward
     def get_flow_weights(self, flow1, flow2): 
@@ -202,11 +205,13 @@ class Image(object):
 
     def sum_short_temporal_loss(self, frame):
         prev_frame = self.prev_frame
+        if self.frame_idx == 0:
+            return 0
         forward_flow = self.make_opt_flow(prev_frame, frame)
         backward_flow = self.make_opt_flow(frame, prev_frame)
         wp = self.warp_image(prev_frame)
         c = self.get_flow_weights(backward_flow, forward_flow)
-        loss = self._temporal_loss(x, wp, c)
+        loss = self._temporal_loss(frame, wp, c)
         return loss
 
     def loss(self):
