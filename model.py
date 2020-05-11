@@ -53,7 +53,7 @@ class Model(object):
         style = load_img(style_filepath, target_size=(self.img_height, self.img_width))
         style = img_to_array(style)
         style = np.expand_dims(style, 0)
-        self.style = K.variable(vgg19.preprocess_input(style))
+        self.style = vgg19.preprocess_input(style)
         content_img = K.variable(self.content)
         style_img = K.variable(self.style)
 
@@ -189,6 +189,7 @@ class Model(object):
                 print("Current epoch: ", (epoch + 1))
                 print("Current loss: ", self.total_loss.eval())
                 sess.run(self.optimizer)
+                #print(self.input)
                 if epoch == (n_iters - 1):
                     gen_img = sess.run([self.input])
                     gen_img = np.asarray(gen_img)
