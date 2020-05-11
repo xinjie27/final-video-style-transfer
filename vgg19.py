@@ -1,6 +1,8 @@
 import numpy as np
 import scipy.io
 import tensorflow as tf
+import os
+from six.moves import urllib
 
 # VGG-19 file links
 VGG_DOWNLOAD_LINK = "http://www.vlfeat.org/matconvnet/models/imagenet-vgg-verydeep-19.mat"
@@ -50,7 +52,6 @@ class VGG(object):
         b = self.vgg_layers[0][layer_idx][0][0][2][0][1]
         # 当前层的名称
         layer_name = self.vgg_layers[0][layer_idx][0][0][0][0]
-        assert layer_name == expected_layer_name, print("Layer name error!")
 
         return W, b.reshape(b.size)
 
@@ -70,9 +71,9 @@ class VGG(object):
             b = tf.constant(b, name="bias")
             # 卷积操作
             conv2d = tf.nn.conv2d(input=prev_layer,
-                                  filter=W,
+                                  filters=W,
                                   strides=[1, 1, 1, 1],
-                                  padding="SAME")
+                                  padding="VALID")
             # 激活
             out = tf.nn.relu(conv2d + b)
         setattr(self, layer_name, out)
@@ -86,7 +87,7 @@ class VGG(object):
         """
         with tf.compat.v1.variable_scope(layer_name):
             # average pooling
-            out = tf.nn.avg_pool(value=prev_layer,
+            out = tf.nn.avg_pool(input=prev_layer,
                                  ksize=[1, 2, 2, 1],
                                  strides=[1, 2, 2, 1],
                                  padding="SAME")
@@ -95,23 +96,23 @@ class VGG(object):
 
     def load(self):
         self.conv2d_relu(self.input_img, 0, "block1_conv1")
-        self.conv2d_relu(self.conv1_1, 2, "block1_conv2")
-        self.avgpool(self.conv1_2, "block1_pool")
-        self.conv2d_relu(self.avgpool1, 5, "block2_conv1")
-        self.conv2d_relu(self.conv2_1, 7, "block2_conv2")
-        self.avgpool(self.conv2_2, "block2_pool")
-        self.conv2d_relu(self.avgpool2, 10, "block3_conv1")
-        self.conv2d_relu(self.conv3_1, 12, "block3_conv2")
-        self.conv2d_relu(self.conv3_2, 14, "block3_conv3")
-        self.conv2d_relu(self.conv3_3, 16, "block3_conv4")
-        self.avgpool(self.conv3_4, "block3_pool")
-        self.conv2d_relu(self.avgpool3, 19, "block4_conv1")
-        self.conv2d_relu(self.conv4_1, 21, "block4_conv2")
-        self.conv2d_relu(self.conv4_2, 23, "block4_conv3")
-        self.conv2d_relu(self.conv4_3, 25, "block4_conv4")
-        self.avgpool(self.conv4_4, "block4_pool")
-        self.conv2d_relu(self.avgpool4, 28, "block5_conv1")
-        self.conv2d_relu(self.conv5_1, 30, "block5_conv2")
-        self.conv2d_relu(self.conv5_2, 32, "block5_conv3")
-        self.conv2d_relu(self.conv5_3, 34, "block5_conv4")
-        self.avgpool(self.conv5_4, "block5_pool")
+        self.conv2d_relu(self.block1_conv1, 2, "block1_conv2")
+        self.avgpool(self.block1_conv2, "block1_pool")
+        self.conv2d_relu(self.block1_pool, 5, "block2_conv1")
+        self.conv2d_relu(self.block2_conv1, 7, "block2_conv2")
+        self.avgpool(self.block2_conv2, "block2_pool")
+        self.conv2d_relu(self.block2_pool, 10, "block3_conv1")
+        self.conv2d_relu(self.block3_conv1, 12, "block3_conv2")
+        self.conv2d_relu(self.block3_conv2, 14, "block3_conv3")
+        self.conv2d_relu(self.block3_conv3, 16, "block3_conv4")
+        self.avgpool(self.block3_conv4, "block3_pool")
+        self.conv2d_relu(self.block3_pool, 19, "block4_conv1")
+        self.conv2d_relu(self.block4_conv1, 21, "block4_conv2")
+        self.conv2d_relu(self.block4_conv2, 23, "block4_conv3")
+        self.conv2d_relu(self.block4_conv3, 25, "block4_conv4")
+        self.avgpool(self.block4_conv4, "block4_pool")
+        self.conv2d_relu(self.block4_pool, 28, "block5_conv1")
+        self.conv2d_relu(self.block5_conv1, 30, "block5_conv2")
+        self.conv2d_relu(self.block5_conv2, 32, "block5_conv3")
+        self.conv2d_relu(self.block5_conv3, 34, "block5_conv4")
+        self.avgpool(self.block5_conv4, "block5_pool")
