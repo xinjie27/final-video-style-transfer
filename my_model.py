@@ -124,7 +124,7 @@ class Model(object):
 
         layer_losses = []
         for i in range(num_layers):
-            layer_loss = self._layer_style_loss(self.input, style_maps[i]) * layer_weights[i]
+            layer_loss = self._layer_style_loss(style_maps[i], getattr(self.vgg, self.style_layers[i])) * layer_weights[i]
             layer_losses.append(layer_loss)
 
         return sum(layer_losses)
@@ -168,7 +168,7 @@ class Model(object):
         # l_style = self._style_loss(combination_maps, style_maps)
 
         # Total loss
-        self.total_loss = self.alpha * l_content + self.beta * l_style
+            self.total_loss = self.alpha * l_content + self.beta * l_style
     
 #     def grad(self, img):
 #          grads = K.gradients(self.total_loss, img)
@@ -229,7 +229,7 @@ if __name__ == "__main__":
     # parser.add_argument('-o', '--output', required=True, help='output path')
     parser.add_argument('--width', required=False, default=400, type=int, help='output image width')
     parser.add_argument('--height', required=False, default=300, type=int, help='output image height')
-    parser.add_argument('--lr', required=False, default=0.001, type=float, help='hyperparameter: learning rate')
+    parser.add_argument('--lr', required=False, default=2, type=float, help='hyperparameter: learning rate')
     # parser.add_argument('--iter', required=False, default=250, type=int, help='hyperparameter: number of training iterations')
 
     args = parser.parse_args()
