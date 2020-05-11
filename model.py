@@ -34,7 +34,8 @@ class Image(object):
         self.style_layer_w = [0.5 * i + 0.5 for i in range(5)]
 
         self.lr = lr
-        self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")  # global step
+        self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")  # Global step
+        print("Current frame: ", self.frame_idx)
 
 
     def create_input(self):
