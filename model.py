@@ -267,25 +267,3 @@ class Image(object):
                     filepath = "./output/frame_%d.png" % self.frame_idx
                     save_image(filepath, gen_image)
                     return gen_image
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input', required=True, help='path to the input')
-    parser.add_argument('-s', '--style_img', required=True, help='path to the style image')
-    # parser.add_argument('-o', '--output', required=True, help='output path')
-    parser.add_argument('--width', required=False, default=400, type=int, help='output image width')
-    parser.add_argument('--height', required=False, default=300, type=int, help='output image height')
-    parser.add_argument('--lr', required=False, default=2., type=float, help='hyperparameter: learning rate')
-    # parser.add_argument('--iter', required=False, default=250, type=int, help='hyperparameter: number of training iterations')
-
-    args = parser.parse_args()
-    input_path = args.input
-    style_path = args.style_img
-    img_height = args.height
-    img_width = args.width
-    lr = args.lr
-
-    model = Image(input_path, style_path, img_height, img_width, lr, 0)
-    model.build()
-    model.train(10)
