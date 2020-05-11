@@ -7,20 +7,20 @@ from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_v
 from tensorflow.keras import backend as K
 from tensorflow.keras import optimizers
 import argparse
+import os
 
 class Model(object):
     def __init__(self, content, style_filepath, img_h, img_w, lr, frame_idx):
         self.learning_rate = 2
         self.alpha = 1e-3
         self.beta = 1
-        # self.content = content
         self.img_height = img_h
         self.img_width = img_w
         # Layers in which we compute the style loss
         self.style_layers = ['block1_conv1', 'block2_conv1', 'block3_conv1', 'block4_conv1', 'block5_conv1']
         # Layer in which we compute the content loss
         self.content_layer = 'block5_conv2'
-        # global step and learning rate
+        # Global step and learning rate
         self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")
         self.lr = lr
         self.frame_idx = frame_idx
@@ -59,12 +59,11 @@ class Model(object):
         self._gen_noise_image(self.content)
         gen_img = K.variable(self.initial_img)
 
-        # combine the 3 images into a single Keras tensor
+        # combine 3 images into a single tensor
         tensor = K.concatenate([content_img, style_img, gen_img], axis=0)
         self.model = VGG19(input_tensor=tensor,include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in self.model.layers])
-        # Preprocess input images
 
     
     def gen_input(self):
@@ -94,7 +93,6 @@ class Model(object):
         :param img: the input image
         :param style: the style image
         """
-        # h, w, num_channels = img.shape
         area = img.shape[0].value * img.shape[1].value
         num_channels = img.shape[2].value
 
@@ -130,12 +128,6 @@ class Model(object):
         """
         with variable_scope("losses"):
             # Content loss
-            # with Session() as sess:
-            #     sess.run(self.input.assign(self.content))
-            #     print(self.layer_outputs[self.content_layer])
-            #     combination_out = self.layer_outputs[self.content_layer]
-            #     print(combination_out)
-            #     content_out = sess.run(combination_out)
             layer_features = self.layer_outputs[self.content_layer]
             content_out = layer_features[0, :, :, :]
             combination_out = layer_features[2, :, :, :]
@@ -143,10 +135,6 @@ class Model(object):
             l_content = self._content_loss(content_out, combination_out)
 
             # Style loss
-            # with Session() as sess:
-            #     print('here 2')
-            #     sess.run(self.input.assign(self.style))
-            #     style_maps = sess.run([self.layer_outputs[layer] for layer in self.style_layers])
             style_maps = []
             for layer in self.style_layers:
                 layer_features = self.layer_outputs[layer]
@@ -158,29 +146,19 @@ class Model(object):
             # Total loss
             self.total_loss = self.alpha * l_content + self.beta * l_style
 
-    # def grad(self, img):
-    #     grads = K.gradients(self.total_loss, img)
-    #     if len(grads) == 1:
-    #         grads = grads.flatten().astype('float64')
-    #     else:
-    #         grads = np.array(grads).flatten().astype('float64')
-    #     self.grads = grads
-
     def optimize(self):
         self.optimizer = train.GradientDescentOptimizer(self.lr).minimize(self.total_loss, global_step=self.gstep)
 
     def train(self, n_iters):
-        print('training starts')
+        print("Training starts.")
         with Session() as sess:
             sess.run(global_variables_initializer())
-
             sess.run(self.input.assign(self.initial_img))
 
             # (maybe)TODO: train.get_checkpoint_state
 
             initial_step = self.gstep.eval()
 
-            #skip_step = 10
             for epoch in range(initial_step, n_iters):
                 print(epoch)
                 sess.run(self.optimizer)
@@ -191,26 +169,8 @@ class Model(object):
                     filepath = "./frames/frame_%d.png" % self.frame_idx
                     save_img(filepath, gen_img)
 
-# class Evaluator(object):
-#     def __init__(self, model):
-#         self.loss_value = None
-#         # self.grads_values = None
-#         self.model = model
-
-#     def loss(self, img):
-#         assert self.loss_value is None
-#         self.model.loss(img)
-#         self.loss_value = self.model.total_loss
-#         return self.model.total_loss
-
-#     def grads(self, img):
-#         assert self.loss_value is not None
-#         self.model.grad(img)
-#         self.loss_value = None
-#         # self.grads_values = None
-#         return self.model.grads
-
 if __name__ == "__main__":
+    os.environ['KMP_DUPLICATE_LIB_OK']='True'
     tf.compat.v1.disable_v2_behavior()
 
     parser = argparse.ArgumentParser()
@@ -234,5 +194,5 @@ if __name__ == "__main__":
     content = np.expand_dims(content, 0)
     model = Model(content, style_path, img_height, img_width, lr, 0)
     model.optimize()
-    model.train(100)
+    model.train(300)
     

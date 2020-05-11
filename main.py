@@ -1,8 +1,10 @@
 import argparse
+import os
 import tensorflow as tf
 from video import Video
 
 def main():
+    os.environ['KMP_DUPLICATE_LIB_OK']='True'
     tf.compat.v1.disable_v2_behavior()
 
     parser = argparse.ArgumentParser()
