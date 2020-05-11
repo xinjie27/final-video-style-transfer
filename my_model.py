@@ -27,7 +27,6 @@ class Model(object):
         self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")
         self.lr = lr
         self.frame_idx = frame_idx
-        self.opt = optimizers.Adam(self.lr)
 
         self.gen_input()
         self.load(content, style_filepath)
@@ -60,7 +59,7 @@ class Model(object):
         # style_img = K.variable(self.style)
 
         self._gen_noise_image(self.content)
-        gen_img = K.variable(self.initial_img)
+        # gen_img = K.variable(self.initial_img)
 
         # Combine 3 images into a single tensor
         # tensor = K.concatenate([content_img, style_img, gen_img], axis=0)
@@ -214,7 +213,7 @@ class Model(object):
                 sess.run(self.optimizer)
                 if epoch == (n_iters - 1):
                     gen_img = sess.run([self.input])
-                    gen_img = np.asarray(gen_img)
+                    gen_img = gen_img[0]
                     final_img = self._deprocess_img(gen_img.copy())
                     filepath = "./frames/frame_%d.png" % self.frame_idx
                     save_img(filepath, final_img)
@@ -244,4 +243,4 @@ if __name__ == "__main__":
     content = np.expand_dims(content, 0)
     model = Model(content, style_path, img_height, img_width, lr, 0)
     model.optimize()
-    model.train(10)
+    model.train(1)
