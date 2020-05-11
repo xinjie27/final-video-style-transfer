@@ -1,5 +1,4 @@
 import os
-
 from PIL import Image, ImageOps
 import numpy as np
 import scipy.misc
