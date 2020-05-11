@@ -33,11 +33,11 @@ class Video(object):
             is_reading, img = video.read()
             if (is_reading == False):
                 break
-            count += 1
             cv2.imwrite("./frames/frame_%d.png" % count, img)
             img_path = "./frames/frame_" + str(count) + ".png"
             result = self._stylize_frame(img_path, count, prev_frame)
             prev_frame = result
+            count += 1
         print("All frames are successfully stylized.")
 
     def frames_to_vid(self, path_in, path_out):
