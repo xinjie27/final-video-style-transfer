@@ -1,7 +1,6 @@
 import os
 import numpy as np
 import tensorflow as tf
-
 from vgg19 import VGG
 from utils import *
 from os.path import isfile, join
@@ -29,7 +28,7 @@ class Image(object):
         # Hyperparameters alpha and beta
         self.content_w = 1e-4
         self.style_w = 1
-        self.gamma = 0.5
+        self.temporal_w = 0.5
 
         # Initialize the weights for all style layers; this hyperparameter can be tuned
         # General idea: deeper layers are more important
@@ -96,7 +95,7 @@ class Image(object):
 
         self.style_loss = sum(self.style_layer_w[i] * unweighted_loss[i] for i in range(num_layers))
 
-    def warp_image(img, flow):
+    def warp_image(self, img, flow):
         h, w = flow.shape[:2]
         flow = -flow
         flow[:,:,0] += np.arange(w)
@@ -104,22 +103,22 @@ class Image(object):
         res = cv2.remap(img, flow, None, cv2.INTER_LINEAR)
         return res
 
-    def make_opt_flow(prev, nxt):
+    def make_opt_flow(self, prev, nxt):
         prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
         nxt_gray = cv2.cvtColor(nxt, cv2.COLOR_BGR2GRAY)
         flow = cv2.calcOpticalFlowFarneback(prev_gray, nxt_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         return flow
 
-    def get_prev_warped_frame(frame):
+    def get_prev_warped_frame(self, frame):
         prev_frame = self.prev_frame
         # backwards flow: current frame -> previous frame
-        flow = make_opt_flow(prev_frame, this_frame)
-        warped_img = warp_image(prev_img, flow).astype(np.float32)
+        flow = self.make_opt_flow(prev_frame, this_frame)
+        warped_img = self.warp_image(prev_img, flow).astype(np.float32)
         # img = preprocess(warped_img)
         return img
 
     #flow1 is back, flow2 is forward
-    def get_flow_weights(flow1, flow2): 
+    def get_flow_weights(self, flow1, flow2): 
         xSize = flow1.shape[1]
         ySize = flow1.shape[0]
         reliable = 255 * np.ones((ySize, xSize))
@@ -195,19 +194,19 @@ class Image(object):
         reliable = np.clip(reliable, 0.0, 255.0)    
         return reliable
     
-    def _temporal_loss(nxt, warped_prev, c):
+    def _temporal_loss(self, nxt, warped_prev, c):
         D = tf.size(nxt, out_type = tf.float32)
         loss = (1. / D) * tf.reduce_sum(tf.multiply(c, tf.squared_difference(nxt, warped_prev)))
         loss = tf.cast(loss, tf.float32)
         return loss
 
-    def sum_short_temporal_loss(frame):
+    def sum_short_temporal_loss(self, frame):
         prev_frame = self.prev_frame
-        forward_flow = make_opt_flow(prev_frame, frame)
-        backward_flow = make_opt_flow(frame, prev_frame)
-        wp = warp_image(prev_frame)
-        c = get_flow_weights(backward_flow, forward_flow)
-        loss = _temporal_loss(x, wp, c)
+        forward_flow = self.make_opt_flow(prev_frame, frame)
+        backward_flow = self.make_opt_flow(frame, prev_frame)
+        wp = self.warp_image(prev_frame)
+        c = self.get_flow_weights(backward_flow, forward_flow)
+        loss = self._temporal_loss(x, wp, c)
         return loss
 
     def loss(self):
@@ -221,6 +220,8 @@ class Image(object):
                 gen_img_content = getattr(self.vgg, self.content_layer)
                 content_img_content = sess.run(gen_img_content)
             self._content_loss(content_img_content, gen_img_content)
+            # Temporal loss
+            self.temporal_loss = self.sum_short_temporal_loss(gen_img_content)
 
             # Style loss
             with tf.compat.v1.Session() as sess:
@@ -228,11 +229,8 @@ class Image(object):
                 style_layers = sess.run([getattr(self.vgg, layer) for layer in self.style_layers])                              
             self._style_loss(style_layers)
 
-            # Temporal loss
-            self.temporal_loss = sum_short_temporal_loss(img) # TODO
-
             # Total loss; update to self.total_loss for future optimization
-            self.total_loss = self.content_w * self.content_loss + self.style_w * self.style_loss + self.gamma * self.temporal_loss
+            self.total_loss = self.content_w * self.content_loss + self.style_w * self.style_loss + self.temporal_w * self.temporal_loss
 
     def optimize(self):
         self.optimizer = train.AdamOptimizer(self.lr).minimize(self.total_loss, global_step=self.gstep)
