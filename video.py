@@ -2,7 +2,7 @@ import cv2
 import os
 import numpy as np
 from os.path import isfile, join
-from model import Model
+from model import Image
 
 class Video(object):
     def __init__(self, video_path, style_path, img_h, img_w, lr, n_iters, fps):
@@ -14,9 +14,9 @@ class Video(object):
         self.n_iters = n_iters
         self.fps = fps
     
-    def _stylize_frame(self, img, frame_idx):
-        image_model = Model(img, self.style_path, self.img_height, self.img_width, self.lr, frame_idx)
-        image_model.optimize()
+    def _stylize_frame(self, img_path, frame_idx):
+        image_model = Image(img_path, self.style_path, self.img_height, self.img_width, self.lr, frame_idx)
+        image_model.build()
         image_model.train(self.n_iters)
 
     def vid_to_frames(self):
@@ -30,7 +30,9 @@ class Video(object):
             if (is_reading == False):
                 break
             count += 1
-            self._stylize_frame(img, count)
+            cv2.imwrite("./frames/frame_%d.png" % count, img)
+            img_path = "./frames/frame_" + str(count) + ".png"
+            self._stylize_frame(img_path, count)
         print("All frames are successfully stylized.")
 
     def frames_to_vid(self, path_in, path_out):

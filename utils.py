@@ -24,7 +24,7 @@ def download(download_link, file_name):
     print('Successfully downloaded VGG-19 pre-trained weights.')
 
 
-def get_resized_image(img_path, width, height, save=True):
+def get_resized_image(img_path, width, height):
     """
     对图片进行像素尺寸的规范化
     
@@ -37,12 +37,7 @@ def get_resized_image(img_path, width, height, save=True):
     image = Image.open(img_path)
     # PIL is column major so you have to swap the places of width and height
     image = ImageOps.fit(image, (width, height), Image.ANTIALIAS)
-    if save:
-        image_dirs = img_path.split('/')
-        image_dirs[-1] = 'resized_' + image_dirs[-1]
-        out_path = '/'.join(image_dirs)
-        if not os.path.exists(out_path):
-            image.save(out_path)
+
     image = np.asarray(image, np.float32)
     return np.expand_dims(image, 0)
 

@@ -142,7 +142,7 @@ class Image(object):
                     print("Epoch: ", (epoch + 1))
                     print("Loss: ", total_loss)
 
-                    filepath = "./frames/frame_%d.png" % self.frame_idx
+                    filepath = "./output/frame_%d.png" % self.frame_idx
                     save_image(filepath, gen_image)
 
 
