@@ -13,7 +13,7 @@ def main():
     parser.add_argument('-o', '--output', required=True, help='output path')
     parser.add_argument('--width', required=False, default=400, type=int, help='output image width')
     parser.add_argument('--height', required=False, default=300, type=int, help='output image height')
-    parser.add_argument('--lr', required=False, default=2., type=float, help='hyperparameter: learning rate')
+    parser.add_argument('--lr', required=False, default=0.1, type=float, help='hyperparameter: learning rate')
     parser.add_argument('--iter', required=False, default=250, type=int, help='hyperparameter: number of training iterations')
     parser.add_argument('--fps', required=False, default=30, type=int, help='frames per second')
 
