@@ -19,8 +19,8 @@ class Video(object):
         tf.reset_default_graph()
         image_model = Image(img_path, self.style_path, self.img_height, self.img_width, self.lr, frame_idx, prev_frame)
         image_model.build()
-        prev_frame = image_model.train(self.n_iters)
-        return prev_frame
+        result = image_model.train(self.n_iters)
+        return result
 
     def vid_to_frames(self):
         video = cv2.VideoCapture(self.video_path)
