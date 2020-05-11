@@ -8,11 +8,11 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import optimizers
 import argparse
 import os
+from scipy.optimize import fmin_l_bfgs_b
 
 class Model(object):
     def __init__(self, content, style_filepath, img_h, img_w, lr, frame_idx):
-        self.learning_rate = 2
-        self.alpha = 1e-3
+        self.alpha = 1e-4
         self.beta = 1
         self.img_height = img_h
         self.img_width = img_w
@@ -24,6 +24,7 @@ class Model(object):
         self.gstep = tf.Variable(0, dtype=tf.int32, trainable=False, name="global_step")
         self.lr = lr
         self.frame_idx = frame_idx
+        self.opt = optimizers.Adam(self.lr)
 
         self.gen_input()
         self.load(content, style_filepath)
@@ -34,7 +35,7 @@ class Model(object):
         img = noise_ratio * noise + (1 - noise_ratio) * content
         self.initial_img = img
     
-    def deprocess_img(self, img):
+    def _deprocess_img(self, img):
         img = img.reshape((self.img_height, self.img_width, 3))
         
         # Inverse mean-centering
@@ -59,9 +60,9 @@ class Model(object):
         self._gen_noise_image(self.content)
         gen_img = K.variable(self.initial_img)
 
-        # combine 3 images into a single tensor
+        # Combine 3 images into a single tensor
         tensor = K.concatenate([content_img, style_img, gen_img], axis=0)
-        self.model = VGG19(input_tensor=tensor,include_top=False, weights='imagenet')
+        self.model = VGG19(input_tensor=tensor, include_top=False, weights='imagenet')
         print("VGG19 successfully loaded.")
         self.layer_outputs = dict([(layer.name, layer.output) for layer in self.model.layers])
 
@@ -102,13 +103,14 @@ class Model(object):
         loss = tf.math.reduce_sum(tf.math.square(gram_img - gram_style)) / (area * area * num_channels * num_channels * 4)
         return loss
 
-    def _style_loss(self, map_set):
+    def _style_loss(self, combination_maps, style_maps):
         """
         Compute the total style loss across all layers
 
-        :param map_set: a set of all feature maps for the style image
+        :param combination_maps: a set of all feature maps for the combination image
+        :param style_maps: a set of all feature maps for the style image
         """
-        num_layers = map_set.shape[0]
+        num_layers = style_maps.shape[0]
 
         # Initialize the weights for all style layers; this hyperparameter can be tuned
         # General idea: deeper layers are more important
@@ -116,8 +118,7 @@ class Model(object):
 
         layer_losses = []
         for i in range(num_layers):
-            style = (self.layer_outputs[self.style_layers[i]])[1,:,:,:]
-            layer_loss = self._layer_style_loss(map_set[i], style) * layer_weights[i]
+            layer_loss = self._layer_style_loss(combination_maps[i], style_maps[i]) * layer_weights[i]
             layer_losses.append(layer_loss)
 
         return sum(layer_losses)
@@ -126,28 +127,58 @@ class Model(object):
         """
         Compute the total loss of the model
         """
-        with variable_scope("losses"):
-            # Content loss
-            layer_features = self.layer_outputs[self.content_layer]
-            content_out = layer_features[0, :, :, :]
-            combination_out = layer_features[2, :, :, :]
+        # Content loss
+        layer_features = self.layer_outputs[self.content_layer]
+        content_out = layer_features[0, :, :, :]
+        combination_out = layer_features[2, :, :, :]
 
-            l_content = self._content_loss(content_out, combination_out)
+        l_content = self._content_loss(content_out, combination_out)
 
-            # Style loss
-            style_maps = []
-            for layer in self.style_layers:
-                layer_features = self.layer_outputs[layer]
-                style_feature = layer_features[1, :, :, :]
-                style_maps.append(style_feature)
-            style_maps = np.asarray(style_maps)                 
-            l_style = self._style_loss(style_maps)
+        # Style loss
+        style_maps = []
+        combination_maps = []
+        for layer in self.style_layers:
+            layer_features = self.layer_outputs[layer]
+            style_feature = layer_features[1, :, :, :]
+            style_maps.append(style_feature)
+            combination_feature = layer_features[2, :, :, :]
+            combination_maps.append(combination_feature)
+        style_maps = np.asarray(style_maps)
+        combination_maps = np.asarray(combination_maps)   
+        l_style = self._style_loss(combination_maps, style_maps)
 
-            # Total loss
-            self.total_loss = self.alpha * l_content + self.beta * l_style
+        # Total loss
+        self.total_loss = self.alpha * l_content + self.beta * l_style
+    
+#     def grad(self, img):
+#          grads = K.gradients(self.total_loss, img)
+#          if len(grads) == 1:
+#              grads = grads.flatten().astype('float64')
+#          else:
+#              grads = np.array(grads).flatten().astype('float64')
+#          self.grads = grads
+
+# class Evaluator(object):
+#      def __init__(self, model):
+#          self.loss_value = None
+#          # self.grads_values = None
+#          self.model = model
+
+#      def loss(self, img):
+#          assert self.loss_value is None
+#          self.model.loss(img)
+#          self.loss_value = self.model.total_loss
+#          return self.model.total_loss
+
+#      def grads(self, img):
+#          assert self.loss_value is not None
+#          self.model.grad(img)
+#          self.loss_value = None
+#          # self.grads_values = None
+#          return self.model.grads
 
     def optimize(self):
-        self.optimizer = train.GradientDescentOptimizer(self.lr).minimize(self.total_loss, global_step=self.gstep)
+        self.optimizer = train.AdamOptimizer(self.lr).minimize(self.total_loss, global_step=self.gstep)
 
     def train(self, n_iters):
         print("Training starts.")
@@ -155,19 +186,18 @@ class Model(object):
             sess.run(global_variables_initializer())
             sess.run(self.input.assign(self.initial_img))
 
-            # (maybe)TODO: train.get_checkpoint_state
-
             initial_step = self.gstep.eval()
 
             for epoch in range(initial_step, n_iters):
-                print(epoch)
+                print("Current epoch: ", (epoch + 1))
+                print("Current loss: ", self.total_loss.eval())
                 sess.run(self.optimizer)
                 if epoch == (n_iters - 1):
                     gen_img = sess.run([self.input])
                     gen_img = np.asarray(gen_img)
-                    gen_img = self.deprocess_img(gen_img)
+                    final_img = self._deprocess_img(gen_img.copy())
                     filepath = "./frames/frame_%d.png" % self.frame_idx
-                    save_img(filepath, gen_img)
+                    save_img(filepath, final_img)
 
 if __name__ == "__main__":
     os.environ['KMP_DUPLICATE_LIB_OK']='True'
@@ -179,7 +209,7 @@ if __name__ == "__main__":
     # parser.add_argument('-o', '--output', required=True, help='output path')
     parser.add_argument('--width', required=False, default=400, type=int, help='output image width')
     parser.add_argument('--height', required=False, default=300, type=int, help='output image height')
-    parser.add_argument('--lr', required=False, default=2., type=float, help='hyperparameter: learning rate')
+    parser.add_argument('--lr', required=False, default=0.001, type=float, help='hyperparameter: learning rate')
     # parser.add_argument('--iter', required=False, default=250, type=int, help='hyperparameter: number of training iterations')
 
     args = parser.parse_args()
@@ -194,5 +224,4 @@ if __name__ == "__main__":
     content = np.expand_dims(content, 0)
     model = Model(content, style_path, img_height, img_width, lr, 0)
     model.optimize()
-    model.train(300)
-    
+    model.train(10)
