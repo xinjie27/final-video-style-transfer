@@ -19,6 +19,7 @@ class Image(object):
         self.style_img = get_resized_image(style_filepath, self.img_width, self.img_height)
         self.initial_img = generate_noise_image(self.content_img, self.img_width, self.img_height)
         self.frame_idx = frame_idx
+        # prev_frame = None if the image is the first frame
         self.prev_frame = prev_frame
 
         # Layers in which we compute the content/style loss
