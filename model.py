@@ -11,15 +11,15 @@ from tensorflow.compat.v1 import variable_scope, get_variable, Session, global_v
 tf.compat.v1.disable_eager_execution()
 
 class Image(object):
-    def __init__(self, content_filepath, style_filepath, img_h, img_w, lr, frame_idx):
+    def __init__(self, content_filepath, style_filepath, img_h, img_w, lr, frame_idx, prev_frame):
         self.img_height = img_h
         self.img_width = img_w
         
         self.content_img = get_resized_image(content_filepath, self.img_width, self.img_height)
         self.style_img = get_resized_image(style_filepath, self.img_width, self.img_height)
         self.initial_img = generate_noise_image(self.content_img, self.img_width, self.img_height)
-        # self.prev_frame = get_resized_image(prev_img, img_width, img_height)
         self.frame_idx = frame_idx
+        self.prev_frame = prev_frame
 
         # Layers in which we compute the content/style loss
         self.content_layer = "block5_conv2"
@@ -88,7 +88,7 @@ class Image(object):
         :param style_maps: a set of all feature maps for the style image
         """
         # We use self.style_layers specified above to compute the total style loss
-        num_layers = len(style_maps) # should be 5
+        num_layers = len(style_maps) # Should be 5
 
         unweighted_loss = [self._layer_style_loss(style_maps[i], getattr(self.vgg, self.style_layers[i]))
              for i in range(num_layers)]
@@ -145,6 +145,7 @@ class Image(object):
 
                     filepath = "./output/frame_%d.png" % self.frame_idx
                     save_image(filepath, gen_image)
+                    return gen_image
 
 
 if __name__ == "__main__":
