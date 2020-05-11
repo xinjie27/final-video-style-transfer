@@ -193,7 +193,7 @@ class Model(object):
                     gen_img = sess.run([self.input])
                     gen_img = np.asarray(gen_img)
                     final_img = self._deprocess_img(gen_img)
-                    self.final = final_img
+                    self.result = final_img
                     filepath = "./frames/frame_%d.png" % self.frame_idx
                     save_img(filepath, final_img)
 
