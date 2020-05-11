@@ -15,7 +15,7 @@ def main():
     parser.add_argument('--height', required=False, default=300, type=int, help='output image height')
     parser.add_argument('--lr', required=False, default=2., type=float, help='hyperparameter: learning rate')
     parser.add_argument('--iter', required=False, default=100, type=int, help='hyperparameter: number of training iterations')
-    parser.add_argument('--fps', required=False, default=30, type=int, help='frames per second')
+    parser.add_argument('--fps', required=False, default=15, type=int, help='frames per second')
 
     args = parser.parse_args()
 
