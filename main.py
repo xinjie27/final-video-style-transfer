@@ -31,7 +31,7 @@ def main():
 
     video_processor = Video(video_path, style_path, img_height, img_width, lr, n_iters, fps)
     video_processor.vid_to_frames()
-    video_processor.frames_to_vid('./frames/', output_path)
+    video_processor.frames_to_vid('./output/', output_path)
 
 if __name__ == "__main__":
     main()
