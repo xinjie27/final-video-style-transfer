@@ -122,7 +122,7 @@ def get_flow_weights(flow1, flow2):
         reliable[ay, ax] = MOTION_BOUNDARIE_VALUE
         continue
       
-  #need to apply smoothing to reliable mat
+  #need to apply smoothing to reliable matrix
   reliable = cv2.GaussianBlur(reliable,(3,3),0)
   reliable = np.clip(reliable, 0.0, 255.0)    
   return reliable
@@ -133,7 +133,7 @@ def _temporal_loss(nxt, warped_prev, c):
   loss = tf.cast(loss, tf.float32)
   return loss
 
-def sum_shortterm_temporal_losses(frame):
+def sum_short_temporal_loss(frame):
   prev_frame = this.prev_frame
   forward_flow = make_opt_flow(prev_frame, frame)
   backward_flow = make_opt_flow(frame, prev_frame)

@@ -105,10 +105,12 @@ class Image(object):
         return res
 
     def make_opt_flow(self, prev, nxt):
-        print(prev.shape)
-        print(nxt.shape)
-        prev_gray = cv2.cvtColor(cv2.UMat(prev[0,:,:,:]), cv2.COLOR_BGR2GRAY)
-        nxt_gray = cv2.cvtColor(cv2.UMat(nxt[0,:,:,:]), cv2.COLOR_BGR2GRAY)
+        prev = prev[0,:,:,:]
+        nxt = nxt[0,:,:,:]
+        prev = np.float32(prev)
+        nxt = np.float32(nxt)
+        prev_gray = cv2.cvtColor(prev, cv2.COLOR_BGR2GRAY)
+        nxt_gray = cv2.cvtColor(nxt, cv2.COLOR_BGR2GRAY)
         flow = cv2.calcOpticalFlowFarneback(prev_gray, nxt_gray, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         return flow
 
@@ -226,7 +228,7 @@ class Image(object):
                 content_img_content = sess.run(gen_img_content)
             self._content_loss(content_img_content, gen_img_content)
             # Temporal loss
-            self.temporal_loss = self.sum_short_temporal_loss(gen_img_content)
+            self.temporal_loss = self.sum_short_temporal_loss(self.input_img)
 
             # Style loss
             with tf.compat.v1.Session() as sess:

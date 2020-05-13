@@ -34,8 +34,8 @@ def frames_to_vid(pathIn, pathOut, fps):
     print('Output video saved. Video legnth: %f seconds.' % (len(frame_array) / fps))
 
 
-# def main():
-#     frames_to_vid('./frames/', 'style_video.mp4', 25) # fps would prob be 30
+def main():
+    frames_to_vid('./output/', 'stylized_video.mp4', 15) # fps would prob be 30
 
-# if __name__ == "__main__":
-#     main()
+if __name__ == "__main__":
+    main()

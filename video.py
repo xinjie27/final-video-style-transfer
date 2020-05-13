@@ -2,7 +2,8 @@ import cv2
 import os
 import numpy as np
 from os.path import isfile, join
-from model import Model
+from model import Image
+import tensorflow as tf
 
 class Video(object):
     def __init__(self, video_path, style_path, img_h, img_w, lr, n_iters, fps):
@@ -14,23 +15,29 @@ class Video(object):
         self.n_iters = n_iters
         self.fps = fps
     
-    def _stylize_frame(self, img, frame_idx):
-        image_model = Model(img, self.style_path, self.img_height, self.img_width, self.lr, frame_idx)
-        image_model.optimize()
-        image_model.train(self.n_iters)
+    def _stylize_frame(self, img_path, frame_idx, prev_frame):
+        tf.reset_default_graph()
+        image_model = Image(img_path, self.style_path, self.img_height, self.img_width, self.lr, frame_idx, prev_frame)
+        image_model.build()
+        result = image_model.train(self.n_iters)
+        return result
 
     def vid_to_frames(self):
         video = cv2.VideoCapture(self.video_path)
         print("Video successfully opened.")
         count = 0 # Frame count
         is_reading = 1
+        prev_frame = None
 
         while is_reading:
             is_reading, img = video.read()
             if (is_reading == False):
                 break
+            cv2.imwrite("./frames/frame_%d.png" % count, img)
+            img_path = "./frames/frame_" + str(count) + ".png"
+            result = self._stylize_frame(img_path, count, prev_frame)
+            prev_frame = result
             count += 1
-            self._stylize_frame(img, count)
         print("All frames are successfully stylized.")
 
     def frames_to_vid(self, path_in, path_out):
